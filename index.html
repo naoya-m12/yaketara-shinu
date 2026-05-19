@@ -986,7 +986,7 @@
       });
 
       if (error) {
-        setSyncStatus(`同期エラー: ${error.message}`, "error");
+        setSyncStatus(`同期エラー: ${formatSupabaseError(error)}`, "error");
         return;
       }
 
@@ -1007,7 +1007,7 @@
       });
 
       if (error) {
-        setSyncStatus(`読込エラー: ${error.message}`, "error");
+        setSyncStatus(`読込エラー: ${formatSupabaseError(error)}`, "error");
         return;
       }
 
@@ -1028,6 +1028,22 @@
 
       await saveCloudNow();
       setupPanelEl.classList.add("hidden");
+    }
+
+    function formatSupabaseError(error) {
+      const message = error?.message || "不明なエラー";
+      const details = [error?.code, error?.details, error?.hint].filter(Boolean).join(" / ");
+      const lower = `${message} ${details}`.toLowerCase();
+
+      if (lower.includes("get_app_data") || lower.includes("upsert_app_data") || lower.includes("function")) {
+        return "SupabaseのSQLが未実行か古いです。supabase-schema.sqlをSQL Editorで再実行してください。";
+      }
+
+      if (lower.includes("permission") || lower.includes("rls") || lower.includes("policy")) {
+        return "Supabaseの権限設定が古いです。supabase-schema.sqlをSQL Editorで再実行してください。";
+      }
+
+      return details ? `${message} (${details})` : message;
     }
 
     async function connectSync() {

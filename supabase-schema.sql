@@ -15,6 +15,7 @@ drop function if exists public.get_app_data(text);
 drop function if exists public.upsert_app_data(text, jsonb);
 
 revoke all on public.app_data from anon;
+revoke all on public.app_data from authenticated;
 
 create or replace function public.get_app_data(p_id text)
 returns jsonb
@@ -44,3 +45,4 @@ $$;
 
 grant execute on function public.get_app_data(text) to anon;
 grant execute on function public.upsert_app_data(text, jsonb) to anon;
+grant usage on schema public to anon;
