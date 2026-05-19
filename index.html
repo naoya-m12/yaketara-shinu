@@ -178,6 +178,14 @@
       margin-top: 8px;
     }
 
+    .header-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
     .dot {
       width: 8px;
       height: 8px;
@@ -422,16 +430,23 @@
     }
 
     .small-danger,
-    .small-secondary {
+    .small-secondary,
+    .tiny-secondary {
       min-height: 34px;
       padding: 0 12px;
       font-size: 12px;
     }
 
-    .small-secondary {
+    .small-secondary,
+    .tiny-secondary {
       background: rgba(255, 255, 255, 0.06);
       color: var(--text);
       border-color: var(--line);
+    }
+
+    .tiny-secondary {
+      min-height: 32px;
+      white-space: nowrap;
     }
 
     .empty,
@@ -496,7 +511,10 @@
     <header>
       <h1>焼けたら死ぬ</h1>
       <p class="subtitle">テンプレを作って、週単位の収益をSupabaseに同期します。</p>
-      <div class="sync-status"><span class="dot" id="syncDot"></span><span id="syncText">未接続</span></div>
+      <div class="header-tools">
+        <div class="sync-status"><span class="dot" id="syncDot"></span><span id="syncText">未接続</span></div>
+        <button class="tiny-secondary" id="showSetup" type="button">同期設定</button>
+      </div>
     </header>
 
     <section class="panel setup-panel" id="setupPanel">
@@ -691,6 +709,7 @@
     const syncTextEl = $("#syncText");
     const workspaceLabelEl = $("#workspaceLabel");
     const setupPanelEl = $("#setupPanel");
+    const showSetupEl = $("#showSetup");
     const supabaseUrlEl = $("#supabaseUrl");
     const supabaseAnonKeyEl = $("#supabaseAnonKey");
     const passphraseEl = $("#passphrase");
@@ -952,11 +971,13 @@
         appState = normalizeState(data.data);
         saveLocalState();
         renderAll();
+        setupPanelEl.classList.add("hidden");
         setSyncStatus("クラウドから読込済み", "synced");
         return;
       }
 
       await saveCloudNow();
+      setupPanelEl.classList.add("hidden");
     }
 
     async function connectSync() {
@@ -981,6 +1002,7 @@
       workspaceId = "";
       localStorage.removeItem(localConfigKey);
       workspaceLabelEl.textContent = "未設定";
+      setupPanelEl.classList.remove("hidden");
       setSyncStatus("この端末の接続設定を解除しました", "");
     }
 
@@ -1347,6 +1369,9 @@
     connectSyncEl.addEventListener("click", connectSync);
     disconnectSyncEl.addEventListener("click", disconnectSync);
     reloadCloudEl.addEventListener("click", loadCloudState);
+    showSetupEl.addEventListener("click", () => {
+      setupPanelEl.classList.toggle("hidden");
+    });
 
     templateListEl.addEventListener("click", (event) => {
       const editButton = event.target.closest("[data-edit-template]");
@@ -1415,6 +1440,7 @@
       workspaceId = config.workspaceId;
       workspaceLabelEl.textContent = `${workspaceId.slice(0, 18)}...`;
       supabase = createClient(config.url, config.anonKey);
+      setupPanelEl.classList.add("hidden");
       loadCloudState();
     } else {
       setSyncStatus("この端末に保存中", "");
