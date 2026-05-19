@@ -11,27 +11,36 @@ drop policy if exists "app_data_insert" on public.app_data;
 drop policy if exists "app_data_update" on public.app_data;
 drop policy if exists "app_data_delete" on public.app_data;
 
-create policy "app_data_read"
-on public.app_data
-for select
-to anon
-using (true);
+drop function if exists public.get_app_data(text);
+drop function if exists public.upsert_app_data(text, jsonb);
 
-create policy "app_data_insert"
-on public.app_data
-for insert
-to anon
-with check (true);
+revoke all on public.app_data from anon;
 
-create policy "app_data_update"
-on public.app_data
-for update
-to anon
-using (true)
-with check (true);
+create or replace function public.get_app_data(p_id text)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select data
+  from public.app_data
+  where id = p_id
+  limit 1;
+$$;
 
-create policy "app_data_delete"
-on public.app_data
-for delete
-to anon
-using (true);
+create or replace function public.upsert_app_data(p_id text, p_data jsonb)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.app_data (id, data, updated_at)
+  values (p_id, p_data, now())
+  on conflict (id)
+  do update set
+    data = excluded.data,
+    updated_at = excluded.updated_at;
+$$;
+
+grant execute on function public.get_app_data(text) to anon;
+grant execute on function public.upsert_app_data(text, jsonb) to anon;
