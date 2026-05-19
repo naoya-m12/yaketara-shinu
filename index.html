@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>焼けたら死ぬ</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090d12;
+      --panel: rgba(18, 26, 35, 0.94);
+      --panel-soft: rgba(255, 255, 255, 0.06);
+      --text: #f4f7fb;
+      --muted: #9aa8b7;
+      --line: rgba(255, 255, 255, 0.12);
+      --accent: #22c7a9;
+      --accent-strong: #14a58b;
+      --accent-soft: rgba(34, 199, 169, 0.18);
+      --danger: #ff6b5f;
+      --danger-soft: rgba(255, 107, 95, 0.14);
+      --warning: #ffd166;
+      --shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(34, 199, 169, 0.16), transparent 34%),
+        linear-gradient(180deg, #0d141d 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      min-height: 46px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 800;
+      touch-action: manipulation;
+    }
+
+    input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+
+    input::placeholder { color: #647384; }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      outline: none;
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .app {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 14px max(28px, env(safe-area-inset-bottom));
+    }
+
+    header { margin: 4px 0 14px; }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 8vw, 52px);
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab,
+    .secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .tab.active,
+    .primary {
+      background: var(--accent);
+      color: #06201b;
+      border-color: var(--accent);
+      box-shadow: 0 12px 30px rgba(34, 199, 169, 0.2);
+    }
+
+    .danger {
+      background: var(--danger-soft);
+      color: #ffd8d4;
+      border-color: rgba(255, 107, 95, 0.34);
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .panel,
+    .summary-card,
+    .entry,
+    .template-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .panel {
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .week-range,
+    .status-box {
+      display: grid;
+      gap: 6px;
+      align-content: center;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .week-range strong,
+    .status-box strong {
+      color: var(--text);
+      font-size: 18px;
+    }
+
+    .sync-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--warning);
+    }
+
+    .dot.synced { background: var(--accent); }
+    .dot.error { background: var(--danger); }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .summary-card { padding: 16px; }
+
+    .summary-card span,
+    .result span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: clamp(28px, 8vw, 44px);
+      line-height: 1;
+      word-break: break-word;
+    }
+
+    .actions,
+    .danger-zone {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .danger-zone { margin: 18px 0 0; }
+
+    .entries,
+    .templates,
+    .record-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .entry,
+    .template-card {
+      padding: 14px;
+    }
+
+    .entry-head,
+    .template-head,
+    .record-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .template-head { margin-bottom: 12px; }
+
+    .template-title {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .template-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .result {
+      min-width: 0;
+      background: var(--panel-soft);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .result strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .chart-title {
+      margin: 18px 0 8px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .line-chart {
+      width: 100%;
+      height: 220px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .line-chart svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .line-chart text {
+      fill: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .grid-line {
+      stroke: rgba(255, 255, 255, 0.12);
+      stroke-width: 1;
+    }
+
+    .line {
+      fill: none;
+      stroke: var(--accent);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 4;
+    }
+
+    .chart-dot {
+      fill: #101821;
+      stroke: var(--accent);
+      stroke-width: 3;
+    }
+
+    .column-chart {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(48px, 1fr);
+      align-items: end;
+      gap: 8px;
+      min-height: 220px;
+      overflow-x: auto;
+      padding: 10px 2px 2px;
+    }
+
+    .yearly-chart {
+      grid-auto-flow: row;
+      grid-auto-columns: initial;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      overflow-x: visible;
+      row-gap: 14px;
+    }
+
+    .column {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 8px;
+      min-width: 48px;
+      height: 210px;
+    }
+
+    .column-track {
+      display: flex;
+      align-items: end;
+      height: 172px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .column-fill {
+      width: 100%;
+      min-height: 2px;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+      border-radius: 8px 8px 0 0;
+    }
+
+    .column-value {
+      position: absolute;
+      top: 8px;
+      left: 4px;
+      right: 4px;
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    .column-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .record-list { margin-top: 12px; }
+
+    .record-item {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    .record-item strong {
+      display: block;
+      color: var(--text);
+      font-size: 17px;
+      margin-bottom: 3px;
+    }
+
+    .record-actions {
+      display: grid;
+      gap: 6px;
+      justify-items: end;
+    }
+
+    .small-danger,
+    .small-secondary {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
+    .small-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .empty,
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 10px 0 0;
+    }
+
+    .setup-panel {
+      border-color: rgba(34, 199, 169, 0.32);
+    }
+
+    .hidden { display: none; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.62);
+      padding: 18px;
+      z-index: 10;
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-box {
+      width: min(100%, 420px);
+      background: #111923;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+      padding: 16px;
+    }
+
+    .modal-box p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 720px) {
+      .app { padding-inline: 22px; }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .summary { grid-template-columns: 1fr 1fr; }
+      .actions { grid-template-columns: repeat(3, 1fr); }
+      .fields { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>焼けたら死ぬ</h1>
+      <p class="subtitle">テンプレを作って、週単位の収益をSupabaseに同期します。</p>
+      <div class="sync-status"><span class="dot" id="syncDot"></span><span id="syncText">未接続</span></div>
+    </header>
+
+    <section class="panel setup-panel" id="setupPanel">
+      <h2>同期設定</h2>
+      <div class="grid">
+        <div>
+          <label for="supabaseUrl">Supabase URL</label>
+          <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co">
+        </div>
+        <div>
+          <label for="supabaseAnonKey">Supabase anon key</label>
+          <input id="supabaseAnonKey" type="password" placeholder="eyJ...">
+        </div>
+        <div>
+          <label for="passphrase">合言葉</label>
+          <input id="passphrase" type="password" placeholder="同じ合言葉で同じデータを開く">
+        </div>
+        <div class="status-box">
+          <span>保存先</span>
+          <strong id="workspaceLabel">未設定</strong>
+        </div>
+      </div>
+      <div class="actions danger-zone">
+        <button class="primary" id="connectSync" type="button">接続して同期</button>
+        <button class="secondary" id="disconnectSync" type="button">この端末の接続設定を解除</button>
+      </div>
+      <p class="note">初回だけSupabaseのURL、anon key、合言葉を入れてください。合言葉そのものは保存せず、合言葉から作ったIDで同期します。</p>
+    </section>
+
+    <nav class="tabs" aria-label="画面切り替え">
+      <button class="tab active" id="inputTab" type="button">入力</button>
+      <button class="tab" id="templateTab" type="button">テンプレ</button>
+      <button class="tab" id="monthlyTab" type="button">月別</button>
+      <button class="tab" id="yearlyTab" type="button">年別</button>
+    </nav>
+
+    <section class="screen active" id="inputScreen">
+      <section class="panel grid" aria-label="登録する週">
+        <div>
+          <label for="selectedDate">日付を選択</label>
+          <input id="selectedDate" type="date">
+        </div>
+        <div class="week-range">
+          <span>登録対象の期間</span>
+          <strong id="weekRange">-</strong>
+          <span id="weekStatus"></span>
+        </div>
+      </section>
+
+      <section class="summary" aria-label="全体集計">
+        <div class="summary-card">
+          <span>すべての合計</span>
+          <strong id="grandTotal">0</strong>
+        </div>
+        <div class="summary-card">
+          <span>すべてのレーキバック</span>
+          <strong id="grandRakeback">0</strong>
+        </div>
+      </section>
+
+      <section class="actions" aria-label="操作">
+        <button class="primary" id="registerWeek" type="button">この週で登録</button>
+        <button class="secondary" id="clearAll" type="button">収益・レーキをクリア</button>
+        <button class="secondary" id="reloadCloud" type="button">クラウドから再読込</button>
+      </section>
+
+      <section class="entries" id="entries" aria-label="入力一覧"></section>
+      <p class="note">入力画面にはテンプレ登録済みの項目だけ表示されます。名前、レーキバック率、ポイント単価はテンプレ画面で管理します。</p>
+    </section>
+
+    <section class="screen" id="templateScreen">
+      <section class="panel">
+        <h2>テンプレ</h2>
+        <div class="grid">
+          <div>
+            <label for="templateName">名前</label>
+            <input id="templateName" type="text" placeholder="例: A卓">
+          </div>
+          <div>
+            <label for="templateRate">レーキバック率（%）</label>
+            <input id="templateRate" type="text" inputmode="decimal" value="70" placeholder="例: 70">
+          </div>
+          <div>
+            <label for="templatePoint">ポイント単価</label>
+            <input id="templatePoint" type="text" inputmode="decimal" value="100" placeholder="例: 100">
+          </div>
+          <div class="status-box">
+            <span>テンプレ数</span>
+            <strong id="templateCount">0</strong>
+          </div>
+        </div>
+        <div class="actions danger-zone">
+          <button class="primary" id="saveTemplate" type="button">テンプレを保存</button>
+          <button class="secondary" id="cancelTemplateEdit" type="button">編集をキャンセル</button>
+        </div>
+      </section>
+      <section class="templates" id="templateList" aria-label="テンプレ一覧"></section>
+    </section>
+
+    <section class="screen" id="monthlyScreen">
+      <section class="panel">
+        <div class="grid">
+          <div>
+            <label for="selectedMonth">表示する月</label>
+            <input id="selectedMonth" type="month">
+          </div>
+          <div class="week-range">
+            <span>月合計</span>
+            <strong id="monthTotal">0</strong>
+            <span id="monthRecordCount">登録なし</span>
+          </div>
+        </div>
+        <h2 class="chart-title">累計推移</h2>
+        <div id="monthlyLineChart" class="line-chart" aria-label="月内の累計収益グラフ"></div>
+        <h2 class="chart-title">週別収益</h2>
+        <div id="monthlyBarChart" class="column-chart" aria-label="週別収益グラフ"></div>
+        <div id="recordList" class="record-list" aria-label="週次登録一覧"></div>
+        <div class="danger-zone">
+          <button class="danger" id="resetAll" type="button">すべて初期化</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="screen" id="yearlyScreen">
+      <section class="panel">
+        <div class="grid">
+          <div>
+            <label for="selectedYear">表示する年</label>
+            <input id="selectedYear" type="number" inputmode="numeric" min="2000" max="2100" step="1">
+          </div>
+          <div class="week-range">
+            <span>年合計</span>
+            <strong id="yearTotal">0</strong>
+            <span id="yearRecordCount">登録なし</span>
+          </div>
+        </div>
+        <h2 class="chart-title">月別収益</h2>
+        <div id="yearlyBarChart" class="column-chart yearly-chart" aria-label="年内の月別収益グラフ"></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-box">
+      <h2 id="confirmTitle">確認</h2>
+      <p id="confirmText">実行しますか？</p>
+      <div class="modal-actions">
+        <button class="secondary" id="cancelAction" type="button">キャンセル</button>
+        <button class="danger" id="confirmAction" type="button">実行する</button>
+      </div>
+    </div>
+  </div>
+
+  <template id="entryTemplate">
+    <article class="entry">
+      <div class="entry-head">
+        <div>
+          <div class="template-title"></div>
+          <div class="template-meta"></div>
+        </div>
+      </div>
+      <div class="fields">
+        <div>
+          <label>収益</label>
+          <input class="profit" type="text" inputmode="decimal" placeholder="例: 100">
+        </div>
+        <div>
+          <label>レーキ</label>
+          <input class="rake" type="text" inputmode="decimal" placeholder="例: 100">
+        </div>
+      </div>
+      <div class="results">
+        <div class="result">
+          <span>合計</span>
+          <strong class="total">0</strong>
+        </div>
+        <div class="result">
+          <span>レーキバック</span>
+          <strong class="rakeback">0</strong>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const $ = (selector) => document.querySelector(selector);
+    const entriesEl = $("#entries");
+    const entryTemplate = $("#entryTemplate");
+    const syncDotEl = $("#syncDot");
+    const syncTextEl = $("#syncText");
+    const workspaceLabelEl = $("#workspaceLabel");
+    const setupPanelEl = $("#setupPanel");
+    const supabaseUrlEl = $("#supabaseUrl");
+    const supabaseAnonKeyEl = $("#supabaseAnonKey");
+    const passphraseEl = $("#passphrase");
+    const connectSyncEl = $("#connectSync");
+    const disconnectSyncEl = $("#disconnectSync");
+    const reloadCloudEl = $("#reloadCloud");
+    const selectedDateEl = $("#selectedDate");
+    const selectedMonthEl = $("#selectedMonth");
+    const selectedYearEl = $("#selectedYear");
+    const weekRangeEl = $("#weekRange");
+    const weekStatusEl = $("#weekStatus");
+    const grandTotalEl = $("#grandTotal");
+    const grandRakebackEl = $("#grandRakeback");
+    const templateNameEl = $("#templateName");
+    const templateRateEl = $("#templateRate");
+    const templatePointEl = $("#templatePoint");
+    const saveTemplateEl = $("#saveTemplate");
+    const cancelTemplateEditEl = $("#cancelTemplateEdit");
+    const templateListEl = $("#templateList");
+    const templateCountEl = $("#templateCount");
+    const monthTotalEl = $("#monthTotal");
+    const monthRecordCountEl = $("#monthRecordCount");
+    const monthlyLineChartEl = $("#monthlyLineChart");
+    const monthlyBarChartEl = $("#monthlyBarChart");
+    const recordListEl = $("#recordList");
+    const yearTotalEl = $("#yearTotal");
+    const yearRecordCountEl = $("#yearRecordCount");
+    const yearlyBarChartEl = $("#yearlyBarChart");
+    const confirmModalEl = $("#confirmModal");
+    const confirmTitleEl = $("#confirmTitle");
+    const confirmTextEl = $("#confirmText");
+    const cancelActionEl = $("#cancelAction");
+    const confirmActionEl = $("#confirmAction");
+
+    const localStateKey = "yaketara:state:v1";
+    const localConfigKey = "yaketara:config:v1";
+    const oldStateKey = "point-calculator:v3";
+    const tableName = "app_data";
+    const numberFormatter = new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 0 });
+
+    let supabase = null;
+    let workspaceId = "";
+    let editingTemplateId = "";
+    let pendingAction = null;
+    let saveTimer = null;
+    let appState = {
+      templates: [],
+      drafts: {},
+      records: {},
+      selectedDate: "",
+      selectedMonth: "",
+      selectedYear: ""
+    };
+
+    function pad(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function toDateKey(date) {
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function toMonthKey(date) {
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+    }
+
+    function parseDateKey(dateKey) {
+      const [year, month, day] = dateKey.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function getWeekInfo(dateKey) {
+      const selected = parseDateKey(dateKey);
+      const day = selected.getDay();
+      const mondayOffset = day === 0 ? -6 : 1 - day;
+      const start = new Date(selected);
+      start.setDate(selected.getDate() + mondayOffset);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return {
+        startKey: toDateKey(start),
+        endKey: toDateKey(end),
+        monthKey: toMonthKey(start),
+        label: `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()} ～ ${end.getFullYear()}/${end.getMonth() + 1}/${end.getDate()}`
+      };
+    }
+
+    function uid() {
+      return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    async function sha256(text) {
+      const bytes = new TextEncoder().encode(text);
+      const hash = await crypto.subtle.digest("SHA-256", bytes);
+      return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    function readNumber(value) {
+      const normalized = String(value || "").replaceAll(",", "").trim();
+      const number = Number(normalized);
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatNumber(value) {
+      return numberFormatter.format(Math.trunc(value));
+    }
+
+    function setSyncStatus(text, status = "") {
+      syncTextEl.textContent = text;
+      syncDotEl.className = `dot ${status}`;
+    }
+
+    function normalizeState(state) {
+      const today = new Date();
+      return {
+        templates: Array.isArray(state?.templates) ? state.templates : [],
+        drafts: state?.drafts && typeof state.drafts === "object" ? state.drafts : {},
+        records: state?.records && typeof state.records === "object" ? state.records : {},
+        selectedDate: state?.selectedDate || toDateKey(today),
+        selectedMonth: state?.selectedMonth || toMonthKey(today),
+        selectedYear: state?.selectedYear || String(today.getFullYear())
+      };
+    }
+
+    function migrateOldState() {
+      try {
+        const oldState = JSON.parse(localStorage.getItem(oldStateKey));
+        if (!oldState?.entries?.length) return null;
+        return normalizeState({
+          templates: oldState.entries.map((entry) => ({
+            id: uid(),
+            name: entry.name || "未命名",
+            rakebackRate: entry.rakebackRate || "70",
+            pointRate: entry.pointRate || "100"
+          })),
+          records: oldState.records || {},
+          selectedDate: oldState.selectedDate,
+          selectedMonth: oldState.selectedMonth,
+          selectedYear: oldState.selectedYear
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    function loadLocalState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(localStateKey));
+        if (saved) return normalizeState(saved);
+      } catch {
+        return normalizeState(null);
+      }
+
+      return migrateOldState() || normalizeState(null);
+    }
+
+    function saveLocalState() {
+      localStorage.setItem(localStateKey, JSON.stringify(appState));
+    }
+
+    function loadLocalConfig() {
+      try {
+        return JSON.parse(localStorage.getItem(localConfigKey)) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveLocalConfig(config) {
+      localStorage.setItem(localConfigKey, JSON.stringify(config));
+    }
+
+    function getTemplate(id) {
+      return appState.templates.find((template) => template.id === id);
+    }
+
+    function calculateEntry(template, draft) {
+      const profit = readNumber(draft?.profit);
+      const rake = readNumber(draft?.rake);
+      const rakeback = rake * (readNumber(template.rakebackRate) / 100);
+      const total = (rakeback + profit) * readNumber(template.pointRate);
+      return { total, rakeback };
+    }
+
+    function getCurrentTotals() {
+      return appState.templates.reduce((sum, template) => {
+        const calculated = calculateEntry(template, appState.drafts[template.id]);
+        return {
+          total: sum.total + calculated.total,
+          rakeback: sum.rakeback + calculated.rakeback
+        };
+      }, { total: 0, rakeback: 0 });
+    }
+
+    function updateEntryCalculations() {
+      let grandTotal = 0;
+      let grandRakeback = 0;
+
+      entriesEl.querySelectorAll(".entry").forEach((entry) => {
+        const template = getTemplate(entry.dataset.templateId);
+        if (!template) return;
+        const draft = appState.drafts[template.id] || {};
+        const calculated = calculateEntry(template, draft);
+        entry.querySelector(".total").textContent = formatNumber(calculated.total);
+        entry.querySelector(".rakeback").textContent = formatNumber(calculated.rakeback);
+        grandTotal += calculated.total;
+        grandRakeback += calculated.rakeback;
+      });
+
+      grandTotalEl.textContent = formatNumber(grandTotal);
+      grandRakebackEl.textContent = formatNumber(grandRakeback);
+    }
+
+    async function saveCloudNow() {
+      saveLocalState();
+      if (!supabase || !workspaceId) {
+        setSyncStatus("この端末に保存済み", "");
+        return;
+      }
+
+      setSyncStatus("同期中", "");
+      const { error } = await supabase
+        .from(tableName)
+        .upsert({
+          id: workspaceId,
+          data: appState,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "id" });
+
+      if (error) {
+        setSyncStatus(`同期エラー: ${error.message}`, "error");
+        return;
+      }
+
+      setSyncStatus("同期済み", "synced");
+    }
+
+    function scheduleSave() {
+      saveLocalState();
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveCloudNow, 600);
+    }
+
+    async function loadCloudState() {
+      if (!supabase || !workspaceId) return;
+      setSyncStatus("読込中", "");
+      const { data, error } = await supabase
+        .from(tableName)
+        .select("data")
+        .eq("id", workspaceId)
+        .maybeSingle();
+
+      if (error) {
+        setSyncStatus(`読込エラー: ${error.message}`, "error");
+        return;
+      }
+
+      if (data?.data) {
+        appState = normalizeState(data.data);
+        saveLocalState();
+        renderAll();
+        setSyncStatus("クラウドから読込済み", "synced");
+        return;
+      }
+
+      await saveCloudNow();
+    }
+
+    async function connectSync() {
+      const url = supabaseUrlEl.value.trim();
+      const anonKey = supabaseAnonKeyEl.value.trim();
+      const passphrase = passphraseEl.value.trim();
+      if (!url || !anonKey || !passphrase) {
+        setSyncStatus("URL、anon key、合言葉を入力してください", "error");
+        return;
+      }
+
+      workspaceId = `workspace_${await sha256(passphrase)}`;
+      supabase = createClient(url, anonKey);
+      saveLocalConfig({ url, anonKey, workspaceId });
+      workspaceLabelEl.textContent = `${workspaceId.slice(0, 18)}...`;
+      passphraseEl.value = "";
+      await loadCloudState();
+    }
+
+    function disconnectSync() {
+      supabase = null;
+      workspaceId = "";
+      localStorage.removeItem(localConfigKey);
+      workspaceLabelEl.textContent = "未設定";
+      setSyncStatus("この端末の接続設定を解除しました", "");
+    }
+
+    function syncSelectedPeriod() {
+      const week = getWeekInfo(selectedDateEl.value);
+      appState.selectedDate = selectedDateEl.value;
+      appState.selectedMonth = week.monthKey;
+      appState.selectedYear = week.monthKey.slice(0, 4);
+      selectedMonthEl.value = appState.selectedMonth;
+      selectedYearEl.value = appState.selectedYear;
+    }
+
+    function renderInput() {
+      const week = getWeekInfo(selectedDateEl.value);
+      weekRangeEl.textContent = week.label;
+      weekStatusEl.textContent = appState.records[week.startKey]
+        ? `登録済み: ${formatNumber(appState.records[week.startKey].total)}`
+        : "未登録";
+      entriesEl.innerHTML = "";
+
+      if (!appState.templates.length) {
+        entriesEl.innerHTML = '<section class="panel"><p class="empty">テンプレ画面でテンプレを登録すると、ここに入力欄が表示されます。</p></section>';
+      }
+
+      appState.templates.forEach((template) => {
+        const draft = appState.drafts[template.id] || {};
+        const entry = entryTemplate.content.firstElementChild.cloneNode(true);
+        entry.dataset.templateId = template.id;
+        entry.querySelector(".template-title").textContent = template.name;
+        entry.querySelector(".template-meta").textContent = `RB ${template.rakebackRate}% / 単価 ${template.pointRate}`;
+        entry.querySelector(".profit").value = draft.profit || "";
+        entry.querySelector(".rake").value = draft.rake || "";
+        const calculated = calculateEntry(template, draft);
+        entry.querySelector(".total").textContent = formatNumber(calculated.total);
+        entry.querySelector(".rakeback").textContent = formatNumber(calculated.rakeback);
+        entriesEl.append(entry);
+      });
+
+      const totals = getCurrentTotals();
+      grandTotalEl.textContent = formatNumber(totals.total);
+      grandRakebackEl.textContent = formatNumber(totals.rakeback);
+    }
+
+    function renderTemplates() {
+      templateCountEl.textContent = String(appState.templates.length);
+      templateListEl.innerHTML = "";
+
+      if (!appState.templates.length) {
+        templateListEl.innerHTML = '<section class="panel"><p class="empty">まだテンプレがありません。名前、レーキバック率、ポイント単価を入れて保存してください。</p></section>';
+        return;
+      }
+
+      appState.templates.forEach((template) => {
+        const card = document.createElement("article");
+        card.className = "template-card";
+        card.innerHTML = `
+          <div class="template-head">
+            <div>
+              <div class="template-title">${escapeHtml(template.name)}</div>
+              <div class="template-meta">RB ${escapeHtml(template.rakebackRate)}% / 単価 ${escapeHtml(template.pointRate)}</div>
+            </div>
+            <div class="record-actions">
+              <button class="small-secondary" type="button" data-edit-template="${template.id}">編集</button>
+              <button class="danger small-danger" type="button" data-delete-template="${template.id}">削除</button>
+            </div>
+          </div>
+        `;
+        templateListEl.append(card);
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function clearTemplateForm() {
+      editingTemplateId = "";
+      templateNameEl.value = "";
+      templateRateEl.value = "70";
+      templatePointEl.value = "100";
+      saveTemplateEl.textContent = "テンプレを保存";
+    }
+
+    function saveTemplate() {
+      const name = templateNameEl.value.trim();
+      if (!name) {
+        setSyncStatus("テンプレ名を入力してください", "error");
+        return;
+      }
+
+      if (editingTemplateId) {
+        const template = getTemplate(editingTemplateId);
+        if (template) {
+          template.name = name;
+          template.rakebackRate = templateRateEl.value.trim() || "0";
+          template.pointRate = templatePointEl.value.trim() || "0";
+        }
+      } else {
+        appState.templates.push({
+          id: uid(),
+          name,
+          rakebackRate: templateRateEl.value.trim() || "0",
+          pointRate: templatePointEl.value.trim() || "0"
+        });
+      }
+
+      clearTemplateForm();
+      renderAll();
+      scheduleSave();
+    }
+
+    function createRecord() {
+      const week = getWeekInfo(selectedDateEl.value);
+      const totals = getCurrentTotals();
+      return {
+        weekStart: week.startKey,
+        weekEnd: week.endKey,
+        monthKey: week.monthKey,
+        label: week.label,
+        total: Math.trunc(totals.total),
+        rakeback: Math.trunc(totals.rakeback),
+        entries: appState.templates.map((template) => ({
+          templateId: template.id,
+          name: template.name,
+          rakebackRate: template.rakebackRate,
+          pointRate: template.pointRate,
+          profit: appState.drafts[template.id]?.profit || "",
+          rake: appState.drafts[template.id]?.rake || "",
+          ...calculateEntry(template, appState.drafts[template.id])
+        })),
+        savedAt: new Date().toISOString()
+      };
+    }
+
+    function registerWeek() {
+      const record = createRecord();
+      if (!appState.templates.length) {
+        setSyncStatus("先にテンプレを登録してください", "error");
+        return;
+      }
+
+      if (appState.records[record.weekStart]) {
+        openConfirm({
+          title: "登録済みの週です",
+          text: `${record.label} の記録を上書きしますか？`,
+          actionLabel: "上書きする",
+          action: () => saveRecord(record)
+        });
+        return;
+      }
+
+      saveRecord(record);
+    }
+
+    function saveRecord(record) {
+      appState.records[record.weekStart] = record;
+      renderAll();
+      scheduleSave();
+    }
+
+    function clearVariableInputs() {
+      appState.drafts = {};
+      renderAll();
+      scheduleSave();
+    }
+
+    function deleteRecord(weekStart) {
+      delete appState.records[weekStart];
+      renderAll();
+      scheduleSave();
+    }
+
+    function resetAllData() {
+      const today = new Date();
+      appState = normalizeState({
+        selectedDate: toDateKey(today),
+        selectedMonth: toMonthKey(today),
+        selectedYear: String(today.getFullYear())
+      });
+      selectedDateEl.value = appState.selectedDate;
+      selectedMonthEl.value = appState.selectedMonth;
+      selectedYearEl.value = appState.selectedYear;
+      localStorage.removeItem(oldStateKey);
+      renderAll();
+      scheduleSave();
+      switchScreen("input");
+    }
+
+    function createLineChart(points) {
+      if (!points.length) return '<p class="empty">この月の登録はまだありません。</p>';
+      const width = 640;
+      const height = 200;
+      const padding = { top: 18, right: 18, bottom: 36, left: 54 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+      const maxValue = Math.max(...points.map((point) => point.value), 1);
+      const xStep = points.length > 1 ? plotWidth / (points.length - 1) : 0;
+      const coords = points.map((point, index) => {
+        const x = points.length > 1 ? padding.left + xStep * index : padding.left + plotWidth / 2;
+        const y = padding.top + plotHeight - (point.value / maxValue) * plotHeight;
+        return { ...point, x, y };
+      });
+      const yTicks = [0, Math.round(maxValue / 2), maxValue];
+
+      return `
+        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="累計収益の折れ線グラフ">
+          ${yTicks.map((tick) => {
+            const y = padding.top + plotHeight - (tick / maxValue) * plotHeight;
+            return `<line class="grid-line" x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}"></line><text x="8" y="${y + 4}">${formatNumber(tick)}</text>`;
+          }).join("")}
+          <polyline class="line" points="${coords.map((point) => `${point.x},${point.y}`).join(" ")}"></polyline>
+          ${coords.map((point) => `<circle class="chart-dot" cx="${point.x}" cy="${point.y}" r="5"></circle><text x="${point.x}" y="${height - 12}" text-anchor="middle">${point.label}</text>`).join("")}
+        </svg>
+      `;
+    }
+
+    function createColumnChart(items, emptyText) {
+      if (!items.length) return `<p class="empty">${emptyText}</p>`;
+      const maxValue = Math.max(...items.map((item) => item.value), 1);
+      return items.map((item) => {
+        const height = item.value > 0 ? Math.max((item.value / maxValue) * 100, 2) : 0;
+        return `
+          <div class="column">
+            <div class="column-track">
+              <div class="column-value">${formatNumber(item.value)}</div>
+              <div class="column-fill" style="height: ${height}%"></div>
+            </div>
+            <div class="column-label">${item.label}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderMonthly() {
+      const monthKey = selectedMonthEl.value || toMonthKey(new Date());
+      const records = Object.values(appState.records)
+        .filter((record) => record.monthKey === monthKey)
+        .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+      let cumulativeTotal = 0;
+      const linePoints = records.map((record) => {
+        cumulativeTotal += record.total;
+        return { label: record.weekStart.slice(5).replace("-", "/"), value: cumulativeTotal };
+      });
+      const barItems = records.map((record) => ({
+        label: `${record.weekStart.slice(5).replace("-", "/")}週`,
+        value: record.total
+      }));
+
+      monthTotalEl.textContent = formatNumber(cumulativeTotal);
+      monthRecordCountEl.textContent = records.length ? `${records.length}週 登録済み` : "登録なし";
+      monthlyLineChartEl.innerHTML = createLineChart(linePoints);
+      monthlyBarChartEl.innerHTML = createColumnChart(barItems, "この月の登録はまだありません。");
+      recordListEl.innerHTML = "";
+
+      records.forEach((record) => {
+        const item = document.createElement("div");
+        item.className = "record-item";
+        item.innerHTML = `
+          <div>
+            <strong>${formatNumber(record.total)}</strong>
+            <span>${record.label}</span>
+          </div>
+          <div class="record-actions">
+            <span>RB ${formatNumber(record.rakeback)}</span>
+            <button class="danger small-danger" type="button" data-delete-week="${record.weekStart}">削除</button>
+          </div>
+        `;
+        recordListEl.append(item);
+      });
+    }
+
+    function renderYearly() {
+      const year = Number(selectedYearEl.value) || new Date().getFullYear();
+      const monthTotals = Array.from({ length: 12 }, (_, index) => ({ label: `${index + 1}月`, value: 0 }));
+      const records = Object.values(appState.records)
+        .filter((record) => Number(record.monthKey.slice(0, 4)) === year);
+
+      records.forEach((record) => {
+        const monthIndex = Number(record.monthKey.slice(5, 7)) - 1;
+        monthTotals[monthIndex].value += record.total;
+      });
+
+      const yearTotal = monthTotals.reduce((sum, month) => sum + month.value, 0);
+      yearTotalEl.textContent = formatNumber(yearTotal);
+      yearRecordCountEl.textContent = records.length ? `${records.length}週 登録済み` : "登録なし";
+      yearlyBarChartEl.innerHTML = createColumnChart(monthTotals, "この年の登録はまだありません。");
+    }
+
+    function renderAll() {
+      selectedDateEl.value = appState.selectedDate;
+      selectedMonthEl.value = appState.selectedMonth;
+      selectedYearEl.value = appState.selectedYear;
+      renderInput();
+      renderTemplates();
+      renderMonthly();
+      renderYearly();
+    }
+
+    function switchScreen(screen) {
+      const screens = ["input", "template", "monthly", "yearly"];
+      screens.forEach((name) => {
+        $(`#${name}Tab`).classList.toggle("active", screen === name);
+        $(`#${name}Screen`).classList.toggle("active", screen === name);
+      });
+    }
+
+    function openConfirm({ title, text, actionLabel, action }) {
+      confirmTitleEl.textContent = title;
+      confirmTextEl.textContent = text;
+      confirmActionEl.textContent = actionLabel;
+      pendingAction = action;
+      confirmModalEl.classList.add("active");
+    }
+
+    function closeConfirm() {
+      pendingAction = null;
+      confirmModalEl.classList.remove("active");
+    }
+
+    entriesEl.addEventListener("input", (event) => {
+      const entry = event.target.closest(".entry");
+      if (!entry) return;
+      const templateId = entry.dataset.templateId;
+      appState.drafts[templateId] = {
+        profit: entry.querySelector(".profit").value,
+        rake: entry.querySelector(".rake").value
+      };
+      updateEntryCalculations();
+      scheduleSave();
+    });
+
+    selectedDateEl.addEventListener("change", () => {
+      syncSelectedPeriod();
+      renderAll();
+      scheduleSave();
+    });
+
+    selectedMonthEl.addEventListener("change", () => {
+      appState.selectedMonth = selectedMonthEl.value;
+      renderMonthly();
+      scheduleSave();
+    });
+
+    selectedYearEl.addEventListener("change", () => {
+      appState.selectedYear = selectedYearEl.value;
+      renderYearly();
+      scheduleSave();
+    });
+
+    $("#inputTab").addEventListener("click", () => switchScreen("input"));
+    $("#templateTab").addEventListener("click", () => switchScreen("template"));
+    $("#monthlyTab").addEventListener("click", () => switchScreen("monthly"));
+    $("#yearlyTab").addEventListener("click", () => switchScreen("yearly"));
+    $("#registerWeek").addEventListener("click", registerWeek);
+    $("#clearAll").addEventListener("click", clearVariableInputs);
+    saveTemplateEl.addEventListener("click", saveTemplate);
+    cancelTemplateEditEl.addEventListener("click", clearTemplateForm);
+    connectSyncEl.addEventListener("click", connectSync);
+    disconnectSyncEl.addEventListener("click", disconnectSync);
+    reloadCloudEl.addEventListener("click", loadCloudState);
+
+    templateListEl.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-edit-template]");
+      const deleteButton = event.target.closest("[data-delete-template]");
+
+      if (editButton) {
+        const template = getTemplate(editButton.dataset.editTemplate);
+        if (!template) return;
+        editingTemplateId = template.id;
+        templateNameEl.value = template.name;
+        templateRateEl.value = template.rakebackRate;
+        templatePointEl.value = template.pointRate;
+        saveTemplateEl.textContent = "テンプレを更新";
+      }
+
+      if (deleteButton) {
+        const template = getTemplate(deleteButton.dataset.deleteTemplate);
+        if (!template) return;
+        openConfirm({
+          title: "テンプレを削除",
+          text: `${template.name} を削除します。入力画面からも消えます。`,
+          actionLabel: "削除する",
+          action: () => {
+            appState.templates = appState.templates.filter((item) => item.id !== template.id);
+            delete appState.drafts[template.id];
+            renderAll();
+            scheduleSave();
+          }
+        });
+      }
+    });
+
+    recordListEl.addEventListener("click", (event) => {
+      const deleteButton = event.target.closest("[data-delete-week]");
+      if (!deleteButton) return;
+      const record = appState.records[deleteButton.dataset.deleteWeek];
+      if (!record) return;
+      openConfirm({
+        title: "週の記録を削除",
+        text: `${record.label} の記録を削除しますか？`,
+        actionLabel: "削除する",
+        action: () => deleteRecord(record.weekStart)
+      });
+    });
+
+    $("#resetAll").addEventListener("click", () => {
+      openConfirm({
+        title: "すべて初期化",
+        text: "テンプレ、入力途中、週次記録、保存済み設定をすべて削除します。初期化しますか？",
+        actionLabel: "初期化する",
+        action: resetAllData
+      });
+    });
+
+    cancelActionEl.addEventListener("click", closeConfirm);
+    confirmActionEl.addEventListener("click", () => {
+      if (pendingAction) pendingAction();
+      closeConfirm();
+    });
+
+    appState = loadLocalState();
+    const config = loadLocalConfig();
+    if (config.url && config.anonKey && config.workspaceId) {
+      supabaseUrlEl.value = config.url;
+      supabaseAnonKeyEl.value = config.anonKey;
+      workspaceId = config.workspaceId;
+      workspaceLabelEl.textContent = `${workspaceId.slice(0, 18)}...`;
+      supabase = createClient(config.url, config.anonKey);
+      loadCloudState();
+    } else {
+      setSyncStatus("この端末に保存中", "");
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
