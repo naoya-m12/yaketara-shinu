@@ -57,6 +57,12 @@
       font-size: 16px;
     }
 
+    input[type="checkbox"] {
+      width: 18px;
+      min-height: 18px;
+      accent-color: var(--accent);
+    }
+
     input::placeholder { color: #647384; }
 
     input:focus {
@@ -176,6 +182,16 @@
       color: var(--muted);
       font-size: 12px;
       margin-top: 8px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      margin-top: 10px;
     }
 
     .header-tools {
@@ -522,7 +538,11 @@
       <div class="grid">
         <div>
           <label for="passphrase">合言葉</label>
-          <input id="passphrase" type="password" placeholder="同じ合言葉で同じデータを開く">
+          <input id="passphrase" type="password" autocomplete="current-password" placeholder="同じ合言葉で同じデータを開く">
+          <label class="check-row" for="rememberPassphrase">
+            <input id="rememberPassphrase" type="checkbox">
+            この端末に合言葉を保存する
+          </label>
         </div>
         <div class="status-box">
           <span>保存先</span>
@@ -703,6 +723,7 @@
     const setupPanelEl = $("#setupPanel");
     const showSetupEl = $("#showSetup");
     const passphraseEl = $("#passphrase");
+    const rememberPassphraseEl = $("#rememberPassphrase");
     const connectSyncEl = $("#connectSync");
     const disconnectSyncEl = $("#disconnectSync");
     const reloadCloudEl = $("#reloadCloud");
@@ -736,6 +757,7 @@
 
     const localStateKey = "yaketara:state:v1";
     const localConfigKey = "yaketara:config:v1";
+    const localPassphraseKey = "yaketara:passphrase:v1";
     const oldStateKey = "point-calculator:v3";
     const tableName = "app_data";
     const supabaseUrl = "https://iiwtpnqnvpvbiabdgtxy.supabase.co";
@@ -930,6 +952,18 @@
       localStorage.setItem(localConfigKey, JSON.stringify(config));
     }
 
+    function loadSavedPassphrase() {
+      return localStorage.getItem(localPassphraseKey) || "";
+    }
+
+    function savePassphraseIfNeeded(passphrase) {
+      if (rememberPassphraseEl.checked) {
+        localStorage.setItem(localPassphraseKey, passphrase);
+      } else {
+        localStorage.removeItem(localPassphraseKey);
+      }
+    }
+
     function getTemplate(id) {
       return appState.templates.find((template) => template.id === id);
     }
@@ -1057,8 +1091,9 @@
       cryptoKey = await deriveCryptoKey(passphrase, workspaceId);
       supabase = createClient(supabaseUrl, supabaseAnonKey);
       saveLocalConfig({ workspaceId });
+      savePassphraseIfNeeded(passphrase);
       workspaceLabelEl.textContent = `${workspaceId.slice(0, 18)}...`;
-      passphraseEl.value = "";
+      if (!rememberPassphraseEl.checked) passphraseEl.value = "";
       await loadCloudState();
     }
 
@@ -1067,6 +1102,9 @@
       workspaceId = "";
       cryptoKey = null;
       localStorage.removeItem(localConfigKey);
+      localStorage.removeItem(localPassphraseKey);
+      rememberPassphraseEl.checked = false;
+      passphraseEl.value = "";
       workspaceLabelEl.textContent = "未設定";
       setupPanelEl.classList.remove("hidden");
       setSyncStatus("この端末の接続設定を解除しました", "");
@@ -1500,10 +1538,19 @@
 
     appState = loadLocalState();
     const config = loadLocalConfig();
+    const savedPassphrase = loadSavedPassphrase();
+    if (savedPassphrase) {
+      passphraseEl.value = savedPassphrase;
+      rememberPassphraseEl.checked = true;
+    }
     if (config.workspaceId) {
       workspaceId = config.workspaceId;
       workspaceLabelEl.textContent = `${workspaceId.slice(0, 18)}...`;
-      setSyncStatus("合言葉を入力して同期してください", "");
+      if (savedPassphrase) {
+        connectSync();
+      } else {
+        setSyncStatus("合言葉を入力して同期してください", "");
+      }
     } else {
       setSyncStatus("この端末に保存中", "");
     }
